@@ -15,6 +15,7 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+cd %~dp0
 if not exist "build\windows\" mkdir "build\windows"
 cd build\windows
 

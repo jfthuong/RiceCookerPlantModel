@@ -11,7 +11,7 @@
 // ============================================================
 
 // Load the package (all sub-classes are discovered automatically)
-loadFile("../PlantModel/package.mo");
+loadFile("../../PlantModel/package.mo");
 getErrorString();
 
 // Export FMU – FMI 2.0, both Model Exchange (me) and Co-Simulation (cs)
