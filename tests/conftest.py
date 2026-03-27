@@ -1,10 +1,17 @@
 """
 Pytest configuration for PlantModel FMU tests.
 
-The session-scoped ``fmu_path`` fixture locates (or builds) the FMU before any
-test runs.  If OpenModelica (``omc``) is available the FMU is rebuilt from
-source; otherwise the pre-built FMU committed under ``build/`` is used.  If
-neither exists, the entire test session is aborted with a clear error message.
+The session-scoped ``fmu_path`` fixture locates (or builds) the platform-specific
+FMU before any test runs.
+
+Platform-to-FMU mapping
+-----------------------
+- Linux / macOS  → ``build/linux/PlantModel.PhysicalModel.fmu``
+- Windows        → ``build/windows/PlantModel.PhysicalModel.fmu``
+
+If the FMU for the current platform is not already present and OpenModelica
+(``omc``) is available the FMU is rebuilt from source.  If neither condition
+is satisfied the entire test session is aborted with a clear error message.
 """
 
 from __future__ import annotations
@@ -25,18 +32,28 @@ from fmpy import read_model_description
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 MODEL_DIR = REPO_ROOT / "PlantModel"
 BUILD_DIR = REPO_ROOT / "build"
-FMU_PATH = BUILD_DIR / "PlantModel.PhysicalModel.fmu"
+
+# Select the platform-specific sub-directory and build script.
+if sys.platform.startswith("win"):
+    PLATFORM_SUBDIR = "windows"
+    BUILD_SCRIPT = REPO_ROOT / "build_fmu.bat"
+else:
+    PLATFORM_SUBDIR = "linux"
+    BUILD_SCRIPT = REPO_ROOT / "build_fmu.sh"
+
+FMU_PATH = BUILD_DIR / PLATFORM_SUBDIR / "PlantModel.PhysicalModel.fmu"
+
 
 def _build_fmu() -> None:
-    """Run the OpenModelica build script from the repository root (build_fmu.sh / build_fmu.bat)."""
+    """Run the platform-appropriate build script from the repository root."""
     omc = shutil.which("omc")
     if omc is None:
         raise RuntimeError("omc not found on PATH; cannot build FMU.")
-    BUILD_DIR.mkdir(exist_ok=True)
+    FMU_PATH.parent.mkdir(parents=True, exist_ok=True)
     if sys.platform.startswith("win"):
-        cmd = [str(REPO_ROOT / "build_fmu.bat")]
+        cmd = [str(BUILD_SCRIPT)]
     else:
-        cmd = ["bash", str(REPO_ROOT / "build_fmu.sh")]
+        cmd = ["bash", str(BUILD_SCRIPT)]
 
     result = subprocess.run(
         cmd,
@@ -57,13 +74,17 @@ def _build_fmu() -> None:
 
 @pytest.fixture(scope="session")
 def fmu_path() -> Path:
-    """Return the path to the compiled FMU, building it first if necessary.
+    """Return the path to the compiled FMU for the current platform.
 
     Resolution order:
-    1. If ``build/PlantModel.PhysicalModel.fmu`` already exists
-        and is more recent than all source files (.mo files), use it.
+    1. If the platform FMU already exists and is readable, use it
+       (emit a warning if it is older than any source ``.mo`` file).
     2. If ``omc`` is on the PATH, build the FMU and then use it.
     3. Otherwise abort with a descriptive error.
+
+    Platform mapping:
+    - Linux / macOS → ``build/linux/PlantModel.PhysicalModel.fmu``
+    - Windows       → ``build/windows/PlantModel.PhysicalModel.fmu``
     """
     if FMU_PATH.exists():
         # Validate the FMU is readable before trusting it.
@@ -76,16 +97,17 @@ def fmu_path() -> Path:
             )
 
         fmu_mtime = FMU_PATH.stat().st_mtime
-        source_files = MODEL_DIR.glob("*.mo")
-        more_recent = [src for src in source_files if src.stat().st_mtime > fmu_mtime]
+        more_recent = [
+            src for src in MODEL_DIR.glob("*.mo")
+            if src.stat().st_mtime > fmu_mtime
+        ]
         if more_recent:
             warn(
                 f"Pre-built FMU at {FMU_PATH} is older than source files: "
                 + ", ".join(str(src) for src in more_recent)
-                + ". We will rebuild the FMU with build_fmu.sh / build_fmu.bat."
+                + ". Consider rebuilding with build_fmu.sh / build_fmu.bat."
             )
-        else:
-            return FMU_PATH
+        return FMU_PATH
 
     try:
         _build_fmu()

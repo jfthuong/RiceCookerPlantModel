@@ -22,7 +22,10 @@ PlantModel/                 Modelica package (open package.mo in OpenModelica)
   PhysicalModel.mo          Main plant block – FMU export target
   TestPhysicalModel.mo      Simulation scenario: 1-hour cook at 80 % heater power
 build/
-  PlantModel.PhysicalModel.fmu  Pre-built FMU (win64 + linux64, FMI 2.0 ME+CS)
+  windows/
+    PlantModel.PhysicalModel.fmu  Pre-built FMU for Windows (win64, FMI 2.0 ME+CS)
+  linux/
+    PlantModel.PhysicalModel.fmu  Pre-built FMU for Linux (linux64, FMI 2.0 ME+CS)
 tests/
   conftest.py               Pytest session fixture that locates / builds the FMU
   test_physical_model.py    Physics-based pytest test suite
@@ -56,8 +59,12 @@ build_fmu.bat
 bash build_fmu.sh
 ```
 
-Both scripts call `omc` with `build_fmu.mos` and produce
-`build/PlantModel.PhysicalModel.fmu`.
+Both scripts call `omc` with `build_fmu.mos` and produce a platform-specific FMU:
+
+| Script | Output |
+|--------|--------|
+| `build_fmu.bat` | `build\windows\PlantModel.PhysicalModel.fmu` |
+| `build_fmu.sh` | `build/linux/PlantModel.PhysicalModel.fmu` |
 
 **Prerequisite:** [OpenModelica](https://openmodelica.org) must be installed and `omc` must be
 on the system `PATH`.
@@ -71,10 +78,16 @@ pip install -r tests/requirements.txt
 pytest tests/
 ```
 
-The session-scoped `fmu_path` fixture checks whether
-`build/PlantModel.PhysicalModel.fmu` already exists.  If it does, the
-pre-built FMU is used immediately.  If `omc` is available on the PATH it is
-rebuilt first.
+The session-scoped `fmu_path` fixture automatically selects the correct FMU for
+the current platform:
+
+| Platform | FMU used |
+|----------|----------|
+| Linux / macOS | `build/linux/PlantModel.PhysicalModel.fmu` |
+| Windows | `build/windows/PlantModel.PhysicalModel.fmu` |
+
+If the platform FMU already exists it is used immediately.  If `omc` is
+available on the PATH the FMU is rebuilt from source first.
 
 The test suite covers:
 
