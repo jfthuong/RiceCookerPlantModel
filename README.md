@@ -21,8 +21,15 @@ PlantModel/                 Modelica package (open package.mo in OpenModelica)
   ComputeHeight.mo          Block: volume-to-bowl-height conversion (visualisation)
   PhysicalModel.mo          Main plant block – FMU export target
   TestPhysicalModel.mo      Simulation scenario: 1-hour cook at 80 % heater power
-build_fmu.mos               OpenModelica script to export the FMU
-build_fmu.bat               Windows batch file to run the FMU build
+build/
+  PlantModel.PhysicalModel.fmu  Pre-built FMU (win64 + linux64, FMI 2.0 ME+CS)
+tests/
+  conftest.py               Pytest session fixture that locates / builds the FMU
+  test_physical_model.py    Physics-based pytest test suite
+  requirements.txt          Python test dependencies (fmpy, pytest)
+build_fmu.mos               OpenModelica script to export the FMU into build/
+build_fmu.bat               Windows batch wrapper for omc
+build_fmu.sh                Linux / macOS shell wrapper for omc
 ```
 
 ## Opening in OpenModelica (OMEdit)
@@ -33,7 +40,9 @@ build_fmu.bat               Windows batch file to run the FMU build
 4. To run the included test simulation, open `PlantModel.TestPhysicalModel` in the diagram
    view and click **Simulate**.
 
-## Building the FMU (Windows)
+## Building the FMU
+
+### Windows
 
 Run from the repository root:
 
@@ -41,11 +50,40 @@ Run from the repository root:
 build_fmu.bat
 ```
 
-This calls `omc` with `build_fmu.mos` and produces `PlantModel.PhysicalModel.fmu` in the
-working directory.
+### Linux / macOS
+
+```bash
+bash build_fmu.sh
+```
+
+Both scripts call `omc` with `build_fmu.mos` and produce
+`build/PlantModel.PhysicalModel.fmu`.
 
 **Prerequisite:** [OpenModelica](https://openmodelica.org) must be installed and `omc` must be
 on the system `PATH`.
+
+## Running the tests
+
+Install the test dependencies and run pytest from the repository root:
+
+```bash
+pip install -r tests/requirements.txt
+pytest tests/
+```
+
+The session-scoped `fmu_path` fixture checks whether
+`build/PlantModel.PhysicalModel.fmu` already exists.  If it does, the
+pre-built FMU is used immediately.  If `omc` is available on the PATH it is
+rebuilt first.
+
+The test suite covers:
+
+| Group | What is verified |
+|-------|-----------------|
+| `TestFmuStructure` | FMI version, model name, causality of every I/O port |
+| `TestThermalDynamics` | No-power equilibrium, analytical heating rate, boiling clamping |
+| `TestWaterEvaporation` | Evaporation during boiling, percentage consistency, absorption-only bound |
+| `TestRiceAbsorptionAndVolume` | Volume growth, physical upper/lower bounds, pct-vs-m³ consistency |
 
 ## PhysicalModel – interface
 

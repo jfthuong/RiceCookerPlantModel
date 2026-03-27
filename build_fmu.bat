@@ -14,10 +14,12 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+if not exist "build/" mkdir "build"
+
 echo Building FMU for PlantModel.PhysicalModel ...
 omc build_fmu.mos
 
-if not exist "PlantModel.PhysicalModel.fmu" (
+if not exist "build\PlantModel.PhysicalModel.fmu" (
     echo.
     echo ERROR: FMU build failed. Review the output above for details.
     exit /b 1
@@ -25,4 +27,4 @@ if not exist "PlantModel.PhysicalModel.fmu" (
 
 echo.
 echo FMU build completed successfully.
-echo Output: PlantModel.PhysicalModel.fmu
+echo Output: build\PlantModel.PhysicalModel.fmu

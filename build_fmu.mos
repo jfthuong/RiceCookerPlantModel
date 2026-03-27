@@ -6,11 +6,14 @@
 //   omc build_fmu.mos
 // ============================================================
 
+// Create build output directory
+system("mkdir -p build");
+
 // Load the package (all sub-classes are discovered automatically)
 loadFile("PlantModel/package.mo");
 getErrorString();
 
 // Export FMU – FMI 2.0, both Model Exchange and Co-Simulation
 buildModelFMU(PlantModel.PhysicalModel, version="2.0", fmuType="me_cs",
-              fileNamePrefix="PlantModel.PhysicalModel");
+              fileNamePrefix="build/PlantModel.PhysicalModel");
 getErrorString();
