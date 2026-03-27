@@ -11,6 +11,6 @@ loadFile("PlantModel/package.mo");
 getErrorString();
 
 // Export FMU – FMI 2.0, both Model Exchange and Co-Simulation
-buildModelFMU(PlantModel.PhysicalModel, version="2.0", fmuType="me+cs",
+buildModelFMU(PlantModel.PhysicalModel, version="2.0", fmuType="me_cs",
               fileNamePrefix="PlantModel.PhysicalModel");
 getErrorString();

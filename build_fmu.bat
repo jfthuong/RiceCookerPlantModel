@@ -17,7 +17,7 @@ if %ERRORLEVEL% neq 0 (
 echo Building FMU for PlantModel.PhysicalModel ...
 omc build_fmu.mos
 
-if %ERRORLEVEL% neq 0 (
+if not exist "PlantModel.PhysicalModel.fmu" (
     echo.
     echo ERROR: FMU build failed. Review the output above for details.
     exit /b 1
