@@ -1,7 +1,6 @@
 within PlantModel;
 
 block ChangeTemp "Computes the temperature rate of change outside the boiling plateau"
-  "Energy balance: dT/dt = (P_in - P_loss) / C_thermal"
 
   Modelica.Blocks.Interfaces.RealInput  T            "Current pot temperature [degC]";
   Modelica.Blocks.Interfaces.RealInput  tempExt       "Ambient temperature [degC]";

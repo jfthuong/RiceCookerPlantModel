@@ -9,13 +9,13 @@ model TestPhysicalModel
 
 equation
   // ---- Constant inputs ----
-  plant.tempExt      = 20.0    "Ambient temperature 20 degC";
-  plant.powerPct     = 80.0    "Heater at 80 %";
-  plant.volWaterInit = 0.5     "0.5 kg initial water";
-  plant.volRiceInit  = 3.0e-4  "0.3 L = 3e-4 m3 initial rice volume";
+  plant.tempExt      = 20.0;   // Ambient temperature 20 degC
+  plant.powerPct     = 80.0;   // Heater at 80 %
+  plant.volWaterInit = 0.5;    // 0.5 kg initial water
+  plant.volRiceInit  = 3.0e-4; // 0.3 L = 3e-4 m3 initial rice volume
 
   // ---- Bowl height visualisation ----
-  waterHeight.volume = plant.massWaterKg / 1000.0 "Approx volume [m3] assuming rho_water ~ 1000 kg/m3";
+  waterHeight.volume = plant.massWaterKg / 1000.0; // Approx volume [m3] assuming rho_water ~ 1000 kg/m3
   riceHeight.volume  = plant.volRiceM3;
 
   annotation(

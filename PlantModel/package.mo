@@ -1,3 +1,5 @@
+within ;
+
 package PlantModel "Rice Cooker Plant Model"
   annotation(
     Documentation(info="<html>
