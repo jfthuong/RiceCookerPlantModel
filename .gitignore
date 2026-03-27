@@ -17,9 +17,15 @@ PlantModel.PhysicalModel_*.json
 PlantModel_PhysicalModel/
 PlantModel.PhysicalModel/
 
-# The FMU in build/ is the committed release artefact – do not ignore it
-# but ignore any FMU accidentally produced at the repo root
+# CMake build artefacts (produced when compiling FMU C sources)
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+*.make
+
+# The FMUs in build/windows/ and build/linux/ are committed release artefacts.
+# Ignore any FMU accidentally produced at the repo root.
 /*.fmu
 build/*.libs
 build/*.json
-
