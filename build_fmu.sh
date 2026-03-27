@@ -16,16 +16,19 @@ if ! command -v omc &>/dev/null; then
 fi
 
 mkdir -p build
+cd build
 
 echo "Building FMU for PlantModel.PhysicalModel ..."
-omc build_fmu.mos
+omc ../build_fmu.mos
 
-if [ ! -f "build/PlantModel.PhysicalModel.fmu" ]; then
+if [ ! -f "PlantModel.PhysicalModel.fmu" ]; then
     echo ""
     echo "ERROR: FMU build failed. Review the output above for details."
+    cd ..
     exit 1
 fi
 
 echo ""
 echo "FMU build completed successfully."
 echo "Output: build/PlantModel.PhysicalModel.fmu"
+cd ..

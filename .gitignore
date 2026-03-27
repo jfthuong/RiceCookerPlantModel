@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.egg-info/
+test-output.xml
 
 # OpenModelica build artefacts (generated alongside source)
 *.c
@@ -19,3 +20,6 @@ PlantModel.PhysicalModel/
 # The FMU in build/ is the committed release artefact – do not ignore it
 # but ignore any FMU accidentally produced at the repo root
 /*.fmu
+build/*.libs
+build/*.json
+
