@@ -1,0 +1,16 @@
+// ============================================================
+// build_fmu.mos – OpenModelica script to export PlantModel.PhysicalModel
+// as an FMU (FMI 2.0, Model Exchange + Co-Simulation).
+//
+// Run from the repository root:
+//   omc build_fmu.mos
+// ============================================================
+
+// Load the package (all sub-classes are discovered automatically)
+loadFile("PlantModel/package.mo");
+getErrorString();
+
+// Export FMU – FMI 2.0, both Model Exchange and Co-Simulation
+buildModelFMU(PlantModel.PhysicalModel, version="2.0", fmuType="me+cs",
+              fileNamePrefix="PlantModel.PhysicalModel");
+getErrorString();
