@@ -20,26 +20,41 @@ if not exist "%MATLAB_EXE%" (
     exit /b 1
 )
 
-echo Building RiceCookerPlant.slx and RiceCookerWithPanels.slx ...
+echo Building RiceCookerPlant.slx and RiceCookerWithPanel.slx ...
 pushd "%SIMULINK_DIR%"
-"%MATLAB_EXE%" -batch "build_model; build_model_with_panels"
+"%MATLAB_EXE%" -batch "build_model; build_model_with_panel"
 set EXIT=%ERRORLEVEL%
 popd
 
 if not "%EXIT%"=="0" (
     echo ERROR: MATLAB exited with code %EXIT%.
+    echo.
+    pause
     exit /b %EXIT%
 )
 
 if not exist "%SIMULINK_DIR%\RiceCookerPlant.slx" (
     echo ERROR: RiceCookerPlant.slx not produced.
-    exit /b 1
+    goto Error
 )
 
-if not exist "%SIMULINK_DIR%\RiceCookerWithPanels.slx" (
-    echo ERROR: RiceCookerWithPanels.slx not produced.
-    exit /b 1
+if not exist "%SIMULINK_DIR%\RiceCookerWithPanel.slx" (
+    echo ERROR: RiceCookerWithPanel.slx not produced.
+    goto Error
 )
 
-echo Done: Simulink\RiceCookerPlant.slx and Simulink\RiceCookerWithPanels.slx
+goto Success
+
+:Error
+echo.
+pause
+timeout /t 10
+
+:Success
+echo.
+echo Simulink models build completed successfully.
+echo Outputs: Simulink\RiceCookerPlant.slx and Simulink\RiceCookerWithPanel.slx
+echo.
 endlocal
+timeout /t 20
+exit /b 0

@@ -12,7 +12,7 @@ where omc >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo ERROR: omc not found.
     echo Please install OpenModelica ^(https://openmodelica.org^) and add it to PATH.
-    exit /b 1
+    goto Error
 )
 
 cd %~dp0
@@ -26,10 +26,21 @@ if not exist "PlantModel.PhysicalModel.fmu" (
     echo.
     echo ERROR: FMU build failed. Review the output above for details.
     cd ..\..
-    exit /b 1
+    goto Error
 )
 
 echo.
 echo FMU build completed successfully.
 echo Output: build\windows\PlantModel.PhysicalModel.fmu
 cd ..\..
+timeout /t 20
+exit /b 0
+
+:Error
+echo.
+echo An error occurred during the FMU build process.
+echo Please review the output above for details.
+echo.
+pause
+exit /b 1
+

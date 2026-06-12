@@ -1,29 +1,31 @@
-function build_model_with_panels(modelName)
-%BUILD_MODEL_WITH_PANELS  Builds RiceCookerWithPanels.slx.
+function build_model_with_panel(modelName)
+%BUILD_MODEL_WITH_PANEL  Builds RiceCookerWithPanel.slx.
 %
 %   Creates a self-contained co-simulation model containing:
 %     - Plant core   : RicePhysics MATLAB Function + 3 Integrators
 %                      (shared with RiceCookerPlant via build_plant_core)
 %     - Controller   : Controller_MainControl.fmu (FMI2 Co-Sim)
-%     - Height compu.: two Gain blocks (mass/volume -> bowl height)
-%     - Visualization: VisualizationPanel.fmu  (7 inputs, display only)
+%     - Scope        : 3-subplot scope (tempC / heaterPowerPct / waterMassKg)
 %     - Panel I/O    : RiceCookerPanel.fmu      (buttons in, LED+text out)
+%
 %
 %   Connections (harness_ControlPhysicsPanel equivalent):
 %     Constants -> plant inputs (tempExt=20, volWater=0.33, volRice=0.33)
-%     Controller heaterPowerPct -> plant powerPct + VisuPanel powerPct
-%     Plant outputs -> VisualizationPanel inputs
-%     Height gains -> VisualizationPanel waterHeight / riceHeight
+%     Controller heaterPowerPct -> plant powerPct + Scope port 2
+%     RicePhysics tempC / waterMassKg -> Scope ports 1 / 3
 %     Controller colorLED -> RiceCookerPanel ColorLED
 %     Controller displayText (6-elem int vector, port 3) -> RiceCookerPanel
 %     RiceCookerPanel buttons -> Controller (via Goto/From tags)
 %
 %   Layout (left -> right):
-%     Constants | Plant core | Controller+Height | VisuPanel | PanelCtrl
+%     Constants | Plant core | Controller | Scope | PanelCtrl
 
 if nargin < 1
-    modelName = 'RiceCookerWithPanels';
+    modelName = 'RiceCookerWithPanel';
 end
+
+thisDir = fileparts(mfilename('fullpath'));
+slxPath = fullfile(thisDir, [modelName '.slx']);
 
 % -------------------------------------------------------------------------
 % Setup
@@ -31,15 +33,11 @@ end
 if bdIsLoaded(modelName)
     close_system(modelName, 0);
 end
-slxFile = [modelName '.slx'];
-if exist(slxFile, 'file')
-    delete(slxFile);
-end
+try_delete_file(slxPath);
 
 new_system(modelName, 'Model');
 load_system(modelName);
 
-thisDir = fileparts(mfilename('fullpath'));
 fmuDir  = fullfile(thisDir, '..', 'fmu');
 addpath(fmuDir);   % FMU block requires folder on path
 
@@ -48,10 +46,21 @@ addpath(fmuDir);   % FMU block requires folder on path
 % =========================================================================
 
 % -------------------------------------------------------------------------
-% Plant core (scale=1.2 for generous spacing)
-% Occupies approximately: x=180-648, y=36-420
+% Plant core
 % -------------------------------------------------------------------------
 build_plant_core(modelName, 1.2);
+
+% Match the saved RiceCookerWithPanel.slx layout exactly.
+set_param([modelName '/RicePhysics'], 'Position', [240 46 430 434]);
+set_param([modelName '/IntegT'], 'Position', [515 32 550 68]);
+set_param([modelName '/IntegMabs'], 'Position', [515 97 550 133]);
+set_param([modelName '/IntegMevap'], 'Position', [515 162 550 198]);
+set_param([modelName '/GotoT'], 'Position', [610 32 650 68]);
+set_param([modelName '/GotoMabs'], 'Position', [610 97 650 133]);
+set_param([modelName '/GotoMevap'], 'Position', [610 162 650 198]);
+set_param([modelName '/FromT'], 'Position', [180 63 215 87]);
+set_param([modelName '/FromMabs'], 'Position', [180 118 215 142]);
+set_param([modelName '/FromMevap'], 'Position', [180 173 215 197]);
 
 % -------------------------------------------------------------------------
 % Constant sources (replace inports for standalone simulation)
@@ -65,20 +74,20 @@ build_plant_core(modelName, 1.2);
 % -------------------------------------------------------------------------
 add_block('simulink/Sources/Constant', [modelName '/tempExt_const'], ...
     'Value', '20', ...
-    'Position', [30 200 110 230]);
+    'Position', [45 225 125 255]);
 
 add_block('simulink/Sources/Constant', [modelName '/volWater_const'], ...
     'Value', '0.33', ...
-    'Position', [30 310 110 340]);
+    'Position', [45 335 125 365]);
 
 add_block('simulink/Sources/Constant', [modelName '/volRice_const'], ...
     'Value', '3.3e-4', ...
-    'Position', [30 400 110 430]);
+    'Position', [45 390 125 420]);
 
 add_block('simulink/Sources/Constant', [modelName '/isLidOpen_const'], ...
     'Value', '0', ...
     'OutDataTypeStr', 'boolean', ...
-    'Position', [30 510 100 540]);
+    'Position', [630 490 700 520]);
 
 % -------------------------------------------------------------------------
 % Extra From block: delayed temperature for Controller input 2
@@ -86,7 +95,7 @@ add_block('simulink/Sources/Constant', [modelName '/isLidOpen_const'], ...
 % -------------------------------------------------------------------------
 add_block('simulink/Signal Routing/From', [modelName '/FromT_ctrl'], ...
     'GotoTag', 'T_state', ...
-    'Position', [180 500 216 530]);
+    'Position', [665 555 700 585]);
 
 % -------------------------------------------------------------------------
 % Controller FMU (Co-Simulation, step=1 s)
@@ -94,7 +103,10 @@ add_block('simulink/Signal Routing/From', [modelName '/FromT_ctrl'], ...
 %   Outputs : heaterPowerPct(1), colorLED(2), displayText[0..5] vector(3)
 % -------------------------------------------------------------------------
 add_block('built-in/FMU', [modelName '/Controller'], ...
-    'Position', [740 470 940 800]);
+    'Position', [740 470 940 800], ...
+    'ForegroundColor', 'white', ...
+    'BackgroundColor', 'black');
+% FMUName must be a filename; folder location is provided via addpath(fmuDir).
 set_param([modelName '/Controller'], 'FMUName', 'Controller_MainControl.fmu');
 
 % -------------------------------------------------------------------------
@@ -105,7 +117,7 @@ set_param([modelName '/Controller'], 'FMUName', 'Controller_MainControl.fmu');
 btnTags = {'BtnStartStop', 'BtnDelay', 'BtnSetTime'};
 
 % From blocks (controller side)
-fromBtnY = [590 655 720];
+fromBtnY = [620 685 750];
 for k = 1:3
     add_block('simulink/Signal Routing/From', ...
         [modelName '/FromBtn' num2str(k)], ...
@@ -114,32 +126,13 @@ for k = 1:3
 end
 
 % Goto blocks (panel side) — placed right of RiceCookerPanel
-gotoBtnY = [555 630 705];
+gotoBtnY = [535 635 735];
 for k = 1:3
     add_block('simulink/Signal Routing/Goto', ...
         [modelName '/GotoBtn' num2str(k)], ...
         'GotoTag', btnTags{k}, ...
-        'Position', [1310 gotoBtnY(k) 1390 gotoBtnY(k)+30]);
+        'Position', [1470 gotoBtnY(k) 1550 gotoBtnY(k)+30]);
 end
-
-% -------------------------------------------------------------------------
-% Height computation: mass/volume -> height in cylindrical bowl
-%   Bowl diameter = 12.5 cm  ->  radius = 0.0625 m
-%   waterHeight [m] = massWaterKg [kg] / (rho_water * pi * r^2)
-%                   = massWaterKg / 1000 / (pi * 0.0625^2)
-%   riceHeight  [m] = volRiceM3  [m^3] / (pi * r^2)
-% -------------------------------------------------------------------------
-r_bowl = 0.0625;   % bowl radius [m]  (12.5 cm diameter, PlantModel package.mo)
-waterH_gain = 100 / (1000 * pi * r_bowl^2);  % (kg -> cm)  [VisualizationPanel expects cm]
-riceH_gain  = 100 / (pi * r_bowl^2);          % (m^3 -> cm) [VisualizationPanel expects cm]
-
-add_block('simulink/Math Operations/Gain', [modelName '/WaterHeightGain'], ...
-    'Gain', num2str(waterH_gain, 15), ...
-    'Position', [660 360 750 390]);
-
-add_block('simulink/Math Operations/Gain', [modelName '/RiceHeightGain'], ...
-    'Gain', num2str(riceH_gain, 15), ...
-    'Position', [660 410 750 440]);
 
 % -------------------------------------------------------------------------
 % Unit Delay on colorLED: breaks the algebraic loop between Controller and
@@ -150,7 +143,7 @@ add_block('simulink/Math Operations/Gain', [modelName '/RiceHeightGain'], ...
 add_block('simulink/Discrete/Unit Delay', [modelName '/ColorLED_Delay'], ...
     'SampleTime', '1', ...
     'InitialCondition', '1', ...  % 1 = GREEN (ready/standby); 0=OFF shows as white
-    'Position', [960 510 1000 545]);
+    'Position', [1015 517 1055 553]);
 
 % -------------------------------------------------------------------------
 % Unit Delay on displayText: breaks the algebraic loop
@@ -163,17 +156,15 @@ add_block('simulink/Discrete/Unit Delay', [modelName '/ColorLED_Delay'], ...
 add_block('simulink/Discrete/Unit Delay', [modelName '/DisplayText_Delay'], ...
     'SampleTime', '1', ...
     'InitialCondition', '[73 68 76 69 32 32]', ...  % 'IDLE  '
-    'Position', [870 735 910 765]);
+    'Position', [1015 675 1055 705]);
 
 % -------------------------------------------------------------------------
-% VisualizationPanel FMU  (7 inputs, no outputs)
-%   Ports (from modelDescription.xml):
-%     1: waterPct    2: waterMassKg  3: waterHeight  4: tempC
-%     5: riceVolM3   6: riceHeight   7: powerPct
+% Scope: tempC (port 1) / heaterPowerPct (port 2) / waterMassKg (port 3)
+% Replaces VisualizationPanel GUI FMU which hangs on fmi2Terminate.
 % -------------------------------------------------------------------------
-add_block('built-in/FMU', [modelName '/VisualizationPanel'], ...
-    'Position', [1010 30 1200 460]);
-set_param([modelName '/VisualizationPanel'], 'FMUName', 'VisualizationPanel.fmu');
+add_block('simulink/Sinks/Scope', [modelName '/PlantScope'], ...
+    'NumInputPorts', '3', ...
+    'Position', [1080 180 1180 300]);
 
 % -------------------------------------------------------------------------
 % RiceCookerPanel FMU  (2 inputs, 3 outputs)
@@ -181,7 +172,8 @@ set_param([modelName '/VisualizationPanel'], 'FMUName', 'VisualizationPanel.fmu'
 %   Outputs : Button1Pressed (1), Button2Pressed (2), Button3Pressed (3)
 % -------------------------------------------------------------------------
 add_block('built-in/FMU', [modelName '/RiceCookerPanel'], ...
-    'Position', [1060 510 1250 810]);
+    'Position', [1135 500 1325 800], ...
+    'ForegroundColor', 'white');
 set_param([modelName '/RiceCookerPanel'], 'FMUName', 'RiceCookerPanel.fmu');
 
 % -------------------------------------------------------------------------
@@ -192,13 +184,14 @@ set_param([modelName '/RiceCookerPanel'], 'FMUName', 'RiceCookerPanel.fmu');
 % -------------------------------------------------------------------------
 add_block('simulink/User-Defined Functions/MATLAB Function', ...
     [modelName '/ScreenTextConv'], ...
-    'Position', [960 730 1045 770]);
+    'Position', [1005 750 1095 790]);
 
 sfObj   = sfroot();
 convChart = sfObj.find('-isa', 'Stateflow.EMChart', 'Path', [modelName '/ScreenTextConv']);
-convChart.Script = sprintf('%s\n%s\n%s\n%s\n%s\n', ...
+convChart.Script = sprintf('%s\n%s\n%s\n%s\n%s\n%s\n', ...
     'function screenText = ScreenTextConv(chars)', ...
     '%#codegen', ...
+    'if isempty(chars), screenText = string("      "); return; end', ...
     'v = int32(chars(:)'');', ...
     'v(v <= 0) = int32(32);  %% replace null/ctrl chars with space', ...
     'screenText = string(char(v));');
@@ -224,29 +217,18 @@ add_line(modelName, 'FromBtn2/1',        'Controller/4', 'autorouting','on');
 add_line(modelName, 'FromBtn3/1',        'Controller/5', 'autorouting','on');
 
 % -------------------------------------------------------------------------
-% Controller output 1 (heaterPowerPct) -> plant + VisualizationPanel
+% Controller output 1 (heaterPowerPct) -> plant + Scope (port 2)
 % -------------------------------------------------------------------------
-add_line(modelName, 'Controller/1', 'RicePhysics/5',         'autorouting','on');
-add_line(modelName, 'Controller/1', 'VisualizationPanel/7',  'autorouting','on');
+add_line(modelName, 'Controller/1', 'RicePhysics/5',  'autorouting','on');
+add_line(modelName, 'Controller/1', 'PlantScope/2',   'autorouting','on');
 
 % -------------------------------------------------------------------------
-% RicePhysics -> VisualizationPanel (waterPct, waterMassKg, tempC, riceVolM3)
+% RicePhysics -> Scope (tempC -> port 1, waterMassKg -> port 3)
 %   Output port mapping (rice_physics.m):
-%     4:tempC  5:massWaterKg  6:massWaterPct  7:volRiceM3  8:volRicePct
+%     4:tempC  5:massWaterKg  6:massWaterPct  7:volRiceM3
 % -------------------------------------------------------------------------
-add_line(modelName, 'RicePhysics/6', 'VisualizationPanel/1', 'autorouting','on');  % waterPct
-add_line(modelName, 'RicePhysics/5', 'VisualizationPanel/2', 'autorouting','on');  % waterMassKg
-add_line(modelName, 'RicePhysics/4', 'VisualizationPanel/4', 'autorouting','on');  % tempC
-add_line(modelName, 'RicePhysics/7', 'VisualizationPanel/5', 'autorouting','on');  % riceVolM3
-
-% -------------------------------------------------------------------------
-% Height gains -> VisualizationPanel (3:waterHeight, 6:riceHeight)
-% -------------------------------------------------------------------------
-add_line(modelName, 'RicePhysics/5',    'WaterHeightGain/1',      'autorouting','on');
-add_line(modelName, 'WaterHeightGain/1','VisualizationPanel/3',   'autorouting','on');
-
-add_line(modelName, 'RicePhysics/7',   'RiceHeightGain/1',       'autorouting','on');
-add_line(modelName, 'RiceHeightGain/1','VisualizationPanel/6',   'autorouting','on');
+add_line(modelName, 'RicePhysics/4', 'PlantScope/1', 'autorouting','on');  % tempC
+add_line(modelName, 'RicePhysics/5', 'PlantScope/3', 'autorouting','on');  % waterMassKg
 
 % -------------------------------------------------------------------------
 % Controller -> RiceCookerPanel
@@ -273,12 +255,16 @@ add_line(modelName, 'RiceCookerPanel/3', 'GotoBtn3/1', 'autorouting','on');
 % =========================================================================
 % SOLVER CONFIGURATION
 % =========================================================================
+% NOTE: Fixed-step solver is CRITICAL with discrete FMU blocks (1 s period).
+% Variable-step solvers (ode23, ode45) can hang when synchronizing multiple
+% discrete FMUs at simulation end. Use fixed-step Runge-Kutta (ode4) for
+% robustness and clean termination.
 set_param(modelName, ...
-    'Solver',      'ode23', ...
-    'SolverType',  'Variable-step', ...
+    'Solver',      'ode4', ...
+    'SolverType',  'Fixed-step', ...
+    'FixedStep',   '0.1', ...
     'StartTime',   '0', ...
     'StopTime',    '7000', ...
-    'MaxStep',     '1', ...
     'RelTol',      '1e-5', ...
     'AbsTol',      '1e-7', ...
     'SaveTime',    'off', ...
@@ -288,8 +274,40 @@ set_param(modelName, ...
 % =========================================================================
 % SAVE
 % =========================================================================
-save_system(modelName, slxFile);
+% Remove the previous .slx right before save so Simulink does not need to
+% create/rename backup files (which often fails when the old file is locked).
+try_delete_file(slxPath);
+
+saveTarget = slxPath;
+try
+    save_system(modelName, saveTarget);
+catch ME
+    if contains(ME.message, 'Permission denied', 'IgnoreCase', true)
+        % Fallback to a unique file if overwrite is blocked by another process.
+        saveTarget = fullfile(thisDir, sprintf('%s_%s.slx', modelName, datestr(now, 'yyyymmdd_HHMMSS')));
+        warning('Could not overwrite %s. Saving to %s instead.', slxPath, saveTarget);
+        save_system(modelName, saveTarget);
+    else
+        rethrow(ME);
+    end
+end
 close_system(modelName, 0);
 
-fprintf('Built %s (%d bytes)\n', slxFile, getfield(dir(slxFile), 'bytes'));
+info = dir(saveTarget);
+fprintf('Built %s (%d bytes)\n', saveTarget, info.bytes);
+end
+
+function try_delete_file(filePath)
+if ~exist(filePath, 'file')
+    return;
+end
+
+% Best effort: clear read-only attribute before deleting.
+fileattrib(filePath, '+w');
+
+try
+    delete(filePath);
+catch
+    % Leave deletion failures to be handled by save fallback logic.
+end
 end

@@ -68,7 +68,9 @@ build_plant_core(modelName);   % scale = 1.0 (compact)
 %   1: heaterPowerPct (Real)  2: colorLED (Integer)
 %   3: displayText (6-element Integer vector for displayText[0..5])
 add_block('built-in/FMU', [modelName '/Controller'], ...
-    'Position', [430 210 560 380]);
+    'Position', [430 210 560 380], ...
+    'ForegroundColor', 'white', ...
+    'BackgroundColor', 'black');
 % FMUName must be set via set_param after add_block (filename only, no path).
 set_param([modelName '/Controller'], 'FMUName', 'Controller_MainControl.fmu');
 
