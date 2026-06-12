@@ -130,8 +130,8 @@ end
 %   riceHeight  [m] = volRiceM3  [m^3] / (pi * r^2)
 % -------------------------------------------------------------------------
 r_bowl = 0.0625;   % bowl radius [m]  (12.5 cm diameter, PlantModel package.mo)
-waterH_gain = 1 / (1000 * pi * r_bowl^2);   % (kg -> m)
-riceH_gain  = 1 / (pi * r_bowl^2);           % (m^3 -> m)
+waterH_gain = 100 / (1000 * pi * r_bowl^2);  % (kg -> cm)  [VisualizationPanel expects cm]
+riceH_gain  = 100 / (pi * r_bowl^2);          % (m^3 -> cm) [VisualizationPanel expects cm]
 
 add_block('simulink/Math Operations/Gain', [modelName '/WaterHeightGain'], ...
     'Gain', num2str(waterH_gain, 15), ...
@@ -149,8 +149,21 @@ add_block('simulink/Math Operations/Gain', [modelName '/RiceHeightGain'], ...
 % -------------------------------------------------------------------------
 add_block('simulink/Discrete/Unit Delay', [modelName '/ColorLED_Delay'], ...
     'SampleTime', '1', ...
-    'InitialCondition', '0', ...
+    'InitialCondition', '1', ...  % 1 = GREEN (ready/standby); 0=OFF shows as white
     'Position', [960 510 1000 545]);
+
+% -------------------------------------------------------------------------
+% Unit Delay on displayText: breaks the algebraic loop
+%   Controller/3 (int32[6]) -> ScreenTextConv -> RiceCookerPanel ->
+%   buttons -> FromBtn -> Controller.
+% Placed BEFORE ScreenTextConv so the delay operates on the int32 vector
+% (Simulink Unit Delay does not support string signals).
+% InitialCondition 'IDLE  ' = [73 68 76 69 32 32] shown at t=0.
+% -------------------------------------------------------------------------
+add_block('simulink/Discrete/Unit Delay', [modelName '/DisplayText_Delay'], ...
+    'SampleTime', '1', ...
+    'InitialCondition', '[73 68 76 69 32 32]', ...  % 'IDLE  '
+    'Position', [870 735 910 765]);
 
 % -------------------------------------------------------------------------
 % VisualizationPanel FMU  (7 inputs, no outputs)
@@ -164,16 +177,31 @@ set_param([modelName '/VisualizationPanel'], 'FMUName', 'VisualizationPanel.fmu'
 
 % -------------------------------------------------------------------------
 % RiceCookerPanel FMU  (2 inputs, 3 outputs)
-%   Inputs  : ColorLED (Integer, port 1), ScreenText (String, port 2 if exposed)
+%   Inputs  : ColorLED (Integer, port 1), ScreenText (String, port 2)
 %   Outputs : Button1Pressed (1), Button2Pressed (2), Button3Pressed (3)
-%
-%   Note: ScreenText is FMI2 type String. Simulink may expose it as a String
-%   port (R2021b+) or as a block parameter only. The wiring below uses a
-%   try/catch to handle both cases gracefully.
 % -------------------------------------------------------------------------
 add_block('built-in/FMU', [modelName '/RiceCookerPanel'], ...
     'Position', [1060 510 1250 810]);
 set_param([modelName '/RiceCookerPanel'], 'FMUName', 'RiceCookerPanel.fmu');
+
+% -------------------------------------------------------------------------
+% ScreenText converter: Controller displayText[0..5] (6-element int32 vector,
+% port 3) -> FMI2 String for RiceCookerPanel ScreenText (port 2).
+% Requires Simulink R2021b+ for string signal support.
+% ASCII 0 (null) chars are replaced with space before conversion.
+% -------------------------------------------------------------------------
+add_block('simulink/User-Defined Functions/MATLAB Function', ...
+    [modelName '/ScreenTextConv'], ...
+    'Position', [960 730 1045 770]);
+
+sfObj   = sfroot();
+convChart = sfObj.find('-isa', 'Stateflow.EMChart', 'Path', [modelName '/ScreenTextConv']);
+convChart.Script = sprintf('%s\n%s\n%s\n%s\n%s\n', ...
+    'function screenText = ScreenTextConv(chars)', ...
+    '%#codegen', ...
+    'v = int32(chars(:)'');', ...
+    'v(v <= 0) = int32(32);  %% replace null/ctrl chars with space', ...
+    'screenText = string(char(v));');
 
 % =========================================================================
 % WIRING
@@ -228,15 +256,12 @@ add_line(modelName, 'RiceHeightGain/1','VisualizationPanel/6',   'autorouting','
 add_line(modelName, 'Controller/2', 'ColorLED_Delay/1',   'autorouting','on');
 add_line(modelName, 'ColorLED_Delay/1', 'RiceCookerPanel/1', 'autorouting','on');
 
-% ScreenText (RiceCookerPanel port 2) is an FMI2 String scalar.
-% Controller port 3 is a 6-element integer vector (displayText[0..5]).
-% Direct wiring causes a dimension mismatch at model-update time.
-% A MATLAB Function block converting int32[6] -> string could bridge the gap,
-% but is version-dependent (Simulink string signals require R2021b+).
-% For now, leave ScreenText unconnected: the FMU uses its default value.
-% To connect manually: add a MATLAB Function block with signature
-%   function s = display_text_str(v), s = string(char(int32(v(:))')); end
-% and wire Controller/3 -> that block -> RiceCookerPanel/2.
+% ScreenText: wire Controller/3 (6-element int32, displayText ASCII codes)
+% through DisplayText_Delay (breaks algebraic loop) then ScreenTextConv
+% MATLAB Function -> RiceCookerPanel port 2.
+add_line(modelName, 'Controller/3',        'DisplayText_Delay/1', 'autorouting','on');
+add_line(modelName, 'DisplayText_Delay/1', 'ScreenTextConv/1',    'autorouting','on');
+add_line(modelName, 'ScreenTextConv/1',    'RiceCookerPanel/2',   'autorouting','on');
 
 % -------------------------------------------------------------------------
 % RiceCookerPanel button outputs -> Goto tags
@@ -252,7 +277,7 @@ set_param(modelName, ...
     'Solver',      'ode23', ...
     'SolverType',  'Variable-step', ...
     'StartTime',   '0', ...
-    'StopTime',    '3600', ...
+    'StopTime',    '7000', ...
     'MaxStep',     '1', ...
     'RelTol',      '1e-5', ...
     'AbsTol',      '1e-7', ...
