@@ -27,8 +27,8 @@ cmake_install.cmake
 # The FMUs in build/windows/ and build/linux/ are committed release artefacts.
 # Ignore any FMU accidentally produced at the repo root.
 /*.fmu
-build/*/*.libs
-build/*/*.json
+fmu-plant/build/*/*.libs
+fmu-plant/build/*/*.json
 
 
 # --- Matlab - Simulink ---
@@ -50,6 +50,7 @@ helpsearch*/
 
 # Simulink code generation folders
 slprj/
+**/slprj/
 sccprj/
 
 # Matlab code generation folders
@@ -69,4 +70,7 @@ octave-workspace
 
 # Output graphs
 cosim_result.png
-fmu/_*/
+*.7z
+*.zip
+fmu-controller/_*/
+fmu-controller/OLD/
