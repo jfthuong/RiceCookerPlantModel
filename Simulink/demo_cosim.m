@@ -13,7 +13,7 @@
 %% ---- Setup -------------------------------------------------------------
 MODEL_NAME   = 'RiceCookerPlant';
 STOP_TIME    = 9000;   % 2.5 hours [s]
-STEP_SIZE    = 1;      % [s] — matches FMU period
+STEP_SIZE    = 0.2;      % [s] — matches FMU period
 
 thisDir = fileparts(mfilename('fullpath'));
 % FMU folder must be on path before sim() runs.

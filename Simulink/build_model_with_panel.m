@@ -106,9 +106,8 @@ add_block('simulink/Signal Routing/From', [modelName '/FromT_ctrl'], ...
 add_block('built-in/FMU', [modelName '/Controller'], ...
     'Position', [230 500 430 830], ...
     'ForegroundColor', 'white', ...
-    'BackgroundColor', 'black');
-% FMUName must be a filename; folder location is provided via addpath(fmuDir).
-set_param([modelName '/Controller'], 'FMUName', 'Controller_MainControl.fmu');
+    'BackgroundColor', 'black', ...
+    'FMUName', 'Controller_MainControl.fmu');
 
 % -------------------------------------------------------------------------
 % Button feedback Goto/From (RiceCookerPanel -> Controller)
@@ -162,19 +161,23 @@ add_block('simulink/Discrete/Unit Delay', [modelName '/DisplayText_Delay'], ...
 % -------------------------------------------------------------------------
 % NOTE: Water percentage calculation block REMOVED
 %   RicePhysics now outputs massWaterPct directly on output port 6
-%   (calculated internally in rice_physics.m)
+%   (calculated internally in rice_cooker_physics.m)
 % -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
 % Scope: tempC (port 1) / heaterPowerPct (port 2) / water volume % (port 3)
 % Replaces VisualizationPanel GUI FMU which hangs on fmi2Terminate.
-% Configured with Y-axis [0, 120] for all subplots and descriptive titles.
-% NOTE: Y-axis limits [0, 120] can be set manually in Scope UI after opening.
 % -------------------------------------------------------------------------
-add_block('simulink/Sinks/Scope', [modelName '/PlantScope'], ...
+scopePath = [modelName '/RiceCookerScope'];
+add_block('simulink/Sinks/Scope', scopePath, ...
     'NumInputPorts', '3', ...
     'Position', [670 255 770 375], ...
-    'LimitDataPoints', 'off');
+    'LimitDataPoints', 'off', ...
+    'ShowLegend', 'on');
+
+% We cannot set the `YLimits` during block addition
+scopeConfig = get_param(scopePath, 'ScopeConfiguration');
+scopeConfig.YLimits = [-1, 110];
 
 % -------------------------------------------------------------------------
 % RiceCookerPanel FMU  (2 inputs, 3 outputs)
@@ -183,8 +186,8 @@ add_block('simulink/Sinks/Scope', [modelName '/PlantScope'], ...
 % -------------------------------------------------------------------------
 add_block('built-in/FMU', [modelName '/RiceCookerPanel'], ...
     'Position', [625 530 815 830], ...
-    'ForegroundColor', 'white');
-set_param([modelName '/RiceCookerPanel'], 'FMUName', 'RiceCookerPanel.fmu');
+    'ForegroundColor', 'white', ...
+    'FMUName', 'RiceCookerPanel.fmu');
 
 % -------------------------------------------------------------------------
 % ScreenText converter: Controller displayText[0..5] (6-element int32 vector,
@@ -227,18 +230,20 @@ add_line(modelName, 'FromBtn2/1',        'Controller/4', 'autorouting','on');
 add_line(modelName, 'FromBtn3/1',        'Controller/5', 'autorouting','on');
 
 % -------------------------------------------------------------------------
-% Controller output 1 (heaterPowerPct) -> plant + Scope (port 2)
+% Controller output 1 (heaterPowerPct) -> plant + Scope (port 3)
+% ... set scope graph to color purple
 % -------------------------------------------------------------------------
 add_line(modelName, 'Controller/1', 'RicePhysics/5',  'autorouting','on');
-add_line(modelName, 'Controller/1', 'PlantScope/2',   'autorouting','on');
+add_line(modelName, 'Controller/1', 'RiceCookerScope/3',   'autorouting','on');
+
 
 % -------------------------------------------------------------------------
-% RicePhysics -> Scope (tempC -> port 1, waterVolumePct -> port 3)
-%   Output port mapping (rice_physics.m):
+% RicePhysics -> Scope (tempC -> port 1, waterVolumePct -> port 2)
+%   Output port mapping (rice_cooker_physics.m):
 %     4:tempC  5:massWaterKg  6:massWaterPct  7:volRiceM3
 % -------------------------------------------------------------------------
-add_line(modelName, 'RicePhysics/4', 'PlantScope/1', 'autorouting','on');  % tempC
-add_line(modelName, 'RicePhysics/6', 'PlantScope/3', 'autorouting','on');  % massWaterPct
+add_line(modelName, 'RicePhysics/4', 'RiceCookerScope/1', 'autorouting','on');  % tempC
+add_line(modelName, 'RicePhysics/6', 'RiceCookerScope/2', 'autorouting','on');  % massWaterPct
 
 % -------------------------------------------------------------------------
 % Controller -> RiceCookerPanel
@@ -265,14 +270,14 @@ add_line(modelName, 'RiceCookerPanel/3', 'GotoBtn3/1', 'autorouting','on');
 % =========================================================================
 % SOLVER CONFIGURATION
 % =========================================================================
-% NOTE: Fixed-step solver is CRITICAL with discrete FMU blocks (1 s period).
+% NOTE: Fixed-step solver is CRITICAL with discrete FMU blocks (200ms period).
 % Variable-step solvers (ode23, ode45) can hang when synchronizing multiple
 % discrete FMUs at simulation end. Use fixed-step Runge-Kutta (ode4) for
 % robustness and clean termination.
 set_param(modelName, ...
     'Solver',      'ode4', ...
     'SolverType',  'Fixed-step', ...
-    'FixedStep',   '0.1', ...
+    'FixedStep',   '0.2', ...
     'StartTime',   '0', ...
     'StopTime',    '7000', ...
     'RelTol',      '1e-5', ...
@@ -335,7 +340,7 @@ function configure_scope_display(modelName)
 
 try
     load_system(modelName);
-    scopePath = [modelName '/PlantScope'];
+    scopePath = [modelName '/RiceCookerScope'];
     
     % Open the Scope to access its underlying configuration object
     open_system(scopePath);

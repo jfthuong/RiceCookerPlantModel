@@ -6,7 +6,7 @@ function build_model(modelName)
 %                   btnStartStop, btnDelay, btnSetTime, isLidOpen
 %     - 8 outports : tempC, massWaterKg, massWaterPct, volRiceM3, volRicePct,
 %                    heaterPowerPct, colorLED, displayText (6-element vector)
-%     - 1 MATLAB Function block running rice_physics.m
+%     - 1 MATLAB Function block running rice_cooker_physics.m
 %     - 3 Integrator blocks: T (IC=20), m_abs (IC=0), m_evap (IC=0)
 %     - 1 FMU Co-simulation block: Controller_MainControl (step=1s)
 %
@@ -70,9 +70,8 @@ build_plant_core(modelName);   % scale = 1.0 (compact)
 add_block('built-in/FMU', [modelName '/Controller'], ...
     'Position', [430 210 560 380], ...
     'ForegroundColor', 'white', ...
-    'BackgroundColor', 'black');
-% FMUName must be set via set_param after add_block (filename only, no path).
-set_param([modelName '/Controller'], 'FMUName', 'Controller_MainControl.fmu');
+    'BackgroundColor', 'black', ...
+    'FMUName', 'Controller_MainControl.fmu');
 
 % Extra From block: feeds T_state (from integrator) to controller.
 % Avoids algebraic loop — uses the delayed integrated temperature.

@@ -38,7 +38,7 @@ fcnBlock = [modelName '/RicePhysics'];
 add_block('simulink/User-Defined Functions/MATLAB Function', fcnBlock, ...
     'Position', P(200, 30, 360, 350));
 
-codeFile = fullfile(thisDir, 'rice_physics.m');
+codeFile = fullfile(thisDir, 'rice_cooker_physics.m');
 code  = fileread(codeFile);
 sf    = sfroot();
 chart = sf.find('-isa', 'Stateflow.EMChart', 'Path', fcnBlock);
