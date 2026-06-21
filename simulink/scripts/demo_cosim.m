@@ -114,7 +114,8 @@ title('Heater Power');
 grid on;
 
 subplot(3,1,3);
-plot(t, waterPct * 100, 'c-', 'LineWidth', 1.5);
+plot(t, waterPct, 'c-', 'LineWidth', 1.5);
+ylim([0 100]);
 xlabel('Time (min)');
 ylabel('Water remaining (%)');
 title('Water Remaining');
