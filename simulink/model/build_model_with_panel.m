@@ -10,7 +10,7 @@ function build_model_with_panel(modelName)
 %
 %
 %   Connections (harness_ControlPhysicsPanel equivalent):
-%     Constants -> plant inputs (tempExt=20, volWater=0.33, volRice=0.33)
+%     Constants -> plant inputs (tempExt=20, volWaterInit=0.33, volRiceInit=3.3e-4)
 %     Controller heaterPowerPct -> plant powerPct + Scope port 2
 %     RicePhysics tempC (4) / waterVolumePct (6) -> Scope ports 1 / 3
 %     Controller colorLED -> ColorLED_Delay -> RiceCookerPanel ColorLED
@@ -64,13 +64,14 @@ set_param([modelName '/FromMevap'], 'Position', [180 173 215 197]);
 
 % -------------------------------------------------------------------------
 % Constant sources (replace inports for standalone simulation)
-%   tempExt    = 20  °C   (ambient temperature)
-%   volWaterInit = 0.33 L (initial water volume)
-%   volRiceInit  = 0.33 L (initial rice volume in m^3 ≈ 0.33e-3, kept as 0.33)
+%   tempExt      = 20 degC  (ambient temperature)
+%   volWaterInit = 0.33 kg  (used as initial water mass scale, ~0.33 L water)
+%   volRiceInit  = 3.3e-4 m^3 (initial rice volume)
 %   isLidOpen  = false    (lid is closed)
 %
-%   NOTE: volWaterInit is used as 'mass' in kg (water density ≈ 1 kg/L),
-%         volRiceInit  is initial rice volume in m^3.
+%   NOTE: volWaterInit is interpreted by the plant model as mass [kg]
+%         (name kept for compatibility with upstream interfaces), and
+%         volRiceInit is initial rice volume [m^3].
 %   NOTE: isLidOpen_const repositioned to match updated layout
 % -------------------------------------------------------------------------
 add_block('simulink/Sources/Constant', [modelName '/tempExt_const'], ...

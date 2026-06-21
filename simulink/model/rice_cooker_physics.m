@@ -36,8 +36,8 @@ C_P_ALU                      = 900.0;
 C_P_WATER                    = 4184.0;
 C_P_DRY_RICE                 = 1200.0;
 DENSITY_RICE_KG_PER_M3       = 900.0;
-MAX_RATIO_WATER_ABSORB_MASS  = 2.0;
-MAX_RATIO_WATER_ABSORB_VOL   = 3.0;
+MAX_RATIO_WATER_ABSORB_BY_MASS = 2.0;
+MAX_RATIO_WATER_ABSORB_BY_VOL  = 3.0;
 S0_BASELINE_SWELLING         = 0.35;
 ABSORPTION_RATE_COEFF        = 1.0e-4;
 ABSORPTION_SAT_DENOM_FACTOR  = 0.5;
@@ -70,7 +70,7 @@ else
 end
 
 % ---- Absorption rate ----------------------------------------------------
-absorb_limit = m_rice * (MAX_RATIO_WATER_ABSORB_MASS - 1.0);
+absorb_limit = m_rice * (MAX_RATIO_WATER_ABSORB_BY_MASS - 1.0);
 if m_abs < absorb_limit
     dmAbs = ABSORPTION_RATE_COEFF * T / BOILING_POINT_C;
 else
@@ -105,7 +105,7 @@ else
     r_abs = 0.0;
 end
 
-volRiceM3 = volRiceInit * (1.0 + (MAX_RATIO_WATER_ABSORB_VOL - 1.0) * ...
+volRiceM3 = volRiceInit * (1.0 + (MAX_RATIO_WATER_ABSORB_BY_VOL - 1.0) * ...
                                    r_abs * f_phase);
 if volRiceInit > 0.0
     volRicePct = 100.0 * volRiceM3 / volRiceInit;
