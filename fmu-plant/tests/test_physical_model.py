@@ -58,7 +58,7 @@ def _run(
     fmu_path: Path,
     *,
     stop_time: float,
-    step_size: float = 1.0,
+    step_size: float = 0.2,
     tempExt: float = 20.0,
     powerPct: float = 100.0,
     volWaterInit: float = 0.5,
@@ -118,7 +118,7 @@ class TestThermalDynamics:
         driven only by heat loss to the environment.  Starting at 20 °C with
         ambient also at 20 °C the net heat flux is zero and ``tempC`` must
         remain at 20 °C throughout the simulation."""
-        result = _run(fmu_path, stop_time=300, step_size=1.0, powerPct=0.0, tempExt=20.0)
+        result = _run(fmu_path, stop_time=300, step_size=0.2, powerPct=0.0, tempExt=20.0)
         assert np.allclose(result["tempC"], 20.0, atol=0.01), (
             "Temperature should stay at ambient when power=0 and T_init=T_amb"
         )
@@ -186,7 +186,7 @@ class TestThermalDynamics:
 
     def test_more_power_means_faster_heating(self, fmu_path: Path) -> None:
         """A higher heater command must produce a greater temperature rise."""
-        kwargs = dict(stop_time=120, step_size=1.0, tempExt=20.0, volWaterInit=0.5, volRiceInit=3e-4)
+        kwargs = dict(stop_time=120, step_size=0.2, tempExt=20.0, volWaterInit=0.5, volRiceInit=3e-4)
         low = _run(fmu_path, powerPct=30.0, **kwargs)
         high = _run(fmu_path, powerPct=90.0, **kwargs)
         assert high["tempC"][-1] > low["tempC"][-1], (

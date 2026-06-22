@@ -137,12 +137,12 @@ end
 
 % -------------------------------------------------------------------------
 % Unit Delay on colorLED: breaks the algebraic loop between Controller and
-% RiceCookerPanel (both FMUs are discrete at 1 s, creating a direct loop).
+% RiceCookerPanel (both FMUs are discrete at 0.2 s, creating a direct loop).
 % A 1-step delay on the LED signal is physically correct: the display
 % updates one cycle after the controller computes a new value.
 % -------------------------------------------------------------------------
 add_block('simulink/Discrete/Unit Delay', [modelName '/ColorLED_Delay'], ...
-    'SampleTime', '1', ...
+    'SampleTime', '0.2', ...
     'InitialCondition', '1', ...  % 1 = GREEN (ready/standby); 0=OFF shows as white
     'Position', [505 547 545 583]);
 
@@ -155,7 +155,7 @@ add_block('simulink/Discrete/Unit Delay', [modelName '/ColorLED_Delay'], ...
 % InitialCondition 'IDLE  ' = [73 68 76 69 32 32] shown at t=0.
 % -------------------------------------------------------------------------
 add_block('simulink/Discrete/Unit Delay', [modelName '/DisplayText_Delay'], ...
-    'SampleTime', '1', ...
+    'SampleTime', '0.2', ...
     'InitialCondition', '[73 68 76 69 32 32]', ...  % 'IDLE  '
     'Position', [505 705 545 735]);
 
