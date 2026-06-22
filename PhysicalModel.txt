@@ -1,0 +1,39 @@
+For our model, we have a rice cooker with an aluminum bowl of a given mass containing before we start a given volume of water and a given volume of rice (usually the same volume). 
+
+For a simplified model, we assume that:
+	The boiling point of water is T_boiling=100℃ (i.e. sea level and standard pressure)
+	The bowl and the water are at the same temperature T
+	The heat loss of our insulated cooker is approximately h A=0.5 W/K
+	The power loss is P_loss=h A (T-T_ext), where T_ext is the ambient temperature
+	The latent heat of vaporization of the water is L=2.257 10^6  J/kg
+	The absorption of water by the rice increases with temperature and strongly accelerates in the gelatinization range (~60–80℃). To keep the model simple but more realistic, we model absorption as a capacity-limited first-order process with a temperature-dependent rate:
+
+		State: m_abs (kg) = cumulative mass of water absorbed by the rice (m_abs starts at 0)
+		Maximum absorption capacity: m_abs,max = r_abs,max · m_rice,init
+		Remaining capacity: m_cap = max(m_abs,max - m_abs, 0)
+
+		Temperature factor:
+			f(T) = ( f_20 + (1-f_20)·clamp((T-20)/(T_boiling-20), 0, 1) ) · (0.5 + 0.5·clamp((T-60)/20, 0, 1))
+
+			where f_20 > 0 is the room-temperature absorption baseline (e.g. f_20 = 0.3),
+			so f(20℃) is nonzero and absorption still compounds even at ambient temperature.
+
+		Absorption increment over ∆t:
+			∆m_abs = clamp( k_abs · f(T) · ∆t · m_cap , 0, m_w )
+			m_abs := m_abs + ∆m_abs
+			m_w   := m_w   - ∆m_abs
+
+	Here k_abs (1/s) is a tuning parameter that sets the absorption speed, r_abs,max is the maximum water-to-dry-rice mass ratio (typical order of magnitude 1–2 depending on rice type and cooking method), and m_w is the remaining free water mass.
+	The specific heat capacities (i.e. the amount of heat that must be added to one unit of mass of the substance to cause an increase of one unit in temperature) of the aluminum, water, and dry rice are respectively C_(p,al)=900 J/kg∙K,〖 C〗_(p,w)=4184 J/kg∙K,〖 C〗_(p,rice)=1200  J/kg∙K
+	The density of rice is 800 kg/m3 (to calculate the initial mass of rice)
+
+During the boiling, the mass of water that evaporates across a time ∆t due to a given input power is ∆m_w=((P_in-P_loss)∙∆t)/L
+
+
+Before it boils or after all the water has disappeared (being either evaporated or absorbed by the rice), the change of temperature for a given input power across a time ∆t is:
+∆T=  ((P_in-P_loss )∙∆t)/(m_al C_(p,al)+ m_(rice,init) C_(p,rice)+ m_(w,total) C_(p,w)  )
+
+, where the total mass of water is the sum of remaining mass of water and mass of water absorbed by the rice:  〖m_(w,total)=m〗_w+m_(w,absorbed)
+
+When the water boils, the temperature is kept constant at the boiling point of water
+
