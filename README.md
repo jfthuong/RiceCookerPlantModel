@@ -15,7 +15,7 @@ fmu-controller/
   RiceCookerPanel.fmu
 
 fmu-plant/
-  src/
+  src/PlantModel/
     package.mo
     package.order
     PhysicalModel.mo

@@ -166,8 +166,7 @@ add_block('simulink/Discrete/Unit Delay', [modelName '/DisplayText_Delay'], ...
 % -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
-% Scope: tempC (port 1) / heaterPowerPct (port 2) / water volume % (port 3)
-% Replaces VisualizationPanel GUI FMU which hangs on fmi2Terminate.
+% Scope: tempC (port 1) / water volume % (port 2) / heaterPowerPct (port 3)
 % -------------------------------------------------------------------------
 scopePath = [modelName '/RiceCookerScope'];
 add_block('simulink/Sinks/Scope', scopePath, ...
